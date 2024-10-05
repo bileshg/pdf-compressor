@@ -17,35 +17,21 @@ def get_pdf_files(directory):
 
 def create_output_filepath(input_path, postfix='_compressed'):
     full_path = os.path.abspath(input_path)
-
-    if os.name == 'nt' and len(full_path) > 260 - len(postfix):
-        click.echo("[ERROR] The file path is too long. Please move the file to a shorter path.")
-        return
-
     base, ext = os.path.splitext(full_path)
     return os.path.abspath(base + postfix + ext)
 
 
-def remove_duplication(input_path, output_path):
+def compress(input_path, output_path, quality):
     reader = PdfReader(input_path)
     writer = PdfWriter()
 
     for page in reader.pages:
         writer.add_page(page)
 
+    # Copy metadata
     writer.add_metadata(reader.metadata)
 
-    with open(output_path, "wb") as fp:
-        writer.write(fp)
-
-
-def reduce_image_quality(input_path, output_path, quality):
-    reader = PdfReader(input_path)
-    writer = PdfWriter()
-
-    for page in reader.pages:
-        writer.add_page(page)
-
+    # Reduce image quality
     for page in writer.pages:
         for img in page.images:
             img.replace(img.image, quality=quality)
@@ -71,24 +57,29 @@ def lossless_compression(input_path, output_path):
 def process_file(input_filepath, image_quality, lossless):
     output_filepath = create_output_filepath(input_filepath)
 
+    input_file = os.path.basename(input_filepath)
+    output_file = os.path.basename(output_filepath)
+
     # Check if the output file already exists
     if (os.path.exists(output_filepath)
             and not click.confirm(
-                f"The file {output_filepath} already exists."
+                f"The file {output_file} already exists.\n"
                 f"Do you want to overwrite it?")):
-        click.echo(f"[INFO] Compression operation canceled for file {input_filepath}.")
+        click.echo(f"[INFO] Compression operation canceled for file {input_file}.")
         return
 
     if lossless:
-        click.echo("[INFO] Lossless compression enabled.")
-        click.echo("[INFO] The --image-quality option if set will be ignored.")
         lossless_compression(input_filepath, output_filepath)
     else:
-        click.echo(f"[INFO] Image quality set to: {image_quality}")
-        reduce_image_quality(input_filepath, output_filepath, image_quality)
-        remove_duplication(output_filepath, output_filepath)
+        compress(input_filepath, output_filepath, image_quality)
 
-    click.echo(f"[INFO] Compressed \"{input_filepath}\" to \"{output_filepath}\"")
+    click.echo(f"[INFO] Compressed \"{input_file}\" to \"{output_file}\"")
+
+
+def process_directory(directory, image_quality, lossless):
+    filepaths = get_pdf_files(directory)
+    for filepath in filepaths:
+        process_file(filepath, image_quality, lossless)
 
 
 @click.command()
@@ -108,11 +99,14 @@ def main(path, image_quality, lossless):
 
     if image_quality < 0 or image_quality > 100:
         click.echo("[ERROR] Image quality must be between 0 and 100.")
+        return
+
+    if lossless:
+        click.echo("[INFO] Lossless compression enabled.")
+        click.echo("[INFO] The --image-quality option if set will be ignored.")
 
     if os.path.isdir(path):
-        filepaths = get_pdf_files(path)
-        for filepath in filepaths:
-            process_file(filepath, image_quality, lossless)
+        process_directory(os.path.abspath(path), image_quality, lossless)
     elif os.path.isfile(path) and is_pdf_file(path):
         process_file(os.path.abspath(path), image_quality, lossless)
     else:

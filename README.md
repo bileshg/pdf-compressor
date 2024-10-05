@@ -7,7 +7,6 @@ A Python-based command-line utility that compresses PDF files by reducing image 
 - **Lossless Compression**: Removes unnecessary duplications and compresses content streams for minimal file size while maintaining the original quality of images and text.
 - **Lossy Compression**: Reduces the image quality within the PDF to save space. You can control the compression quality via the `--image-quality` option.
 - **Batch Processing**: Compress all PDF files within a given directory.
-- **Cross-Platform Compatibility**: Works on both Windows and UNIX-based systems, with built-in handling for Windows-specific path length limitations.
 
 ## Requirements
 
@@ -62,4 +61,3 @@ If the compressed output file already exists, the program will prompt you to con
 2. **Compression Methods**:
    - **Lossless**: Optimizes the PDF structure and content streams without affecting image quality.
    - **Lossy**: Compresses images based on the quality specified.
-3. **Windows Path Length Handling**: Checks for potential issues with file path length on Windows systems and provides an error message if the path exceeds allowed limits.
